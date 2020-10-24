@@ -196,7 +196,7 @@ function selectPackageWithSerial() {
     fi
 
     filter=$arg2
-    pkg=$($ADB -s $serial shell pm list package $filter | cut -d ':' -f 2 | $FZF)
+    pkg=$($ADB -s $serial shell pm list package $filter -u | cut -d ':' -f 2 | $FZF)
     if [[ -z $pkg ]]; then
         exit $EXT_CANCELLED
     fi
