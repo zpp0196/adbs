@@ -126,11 +126,8 @@ function getSerial() {
     if [[ -f $SERIAL_FILE ]]; then
         serial=$(cat $SERIAL_FILE)
         if [[ $option == "-n" ]]; then
-            isDeviceOnline $serial
-            if [[ $? == 0 ]]; then
-                echo $serial
-                return
-            fi
+            selectSerial $serial
+            exit
         else
             isDeviceOnline $serial
             echoColorful $? "$serial"
@@ -501,11 +498,13 @@ case $1 in
     shift 1
     $ADB devices $@
     ;;
+"sl") selectSerial $2 ;;
 "ss") setSerial $2 ;;
 "gs") getSerial $2 ;;
 "cs") clearSerial ;;
 "serial")
     case $2 in
+    "select") selectSerial $3 ;;
     "set") setSerial $3 ;;
     "get") getSerial $3 ;;
     "clear") clearSerial ;;

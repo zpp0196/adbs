@@ -28,6 +28,13 @@ $ adb ds [-l]
 ### serial
 
 ```bash
+$ adb serial select [<serial>]
+$ adb sl [<serial>]
+```
+
+如果指定的设备在线则直接输出序列号，否则选择一个设备并输出序列号。
+
+```bash
 $ adb serial set [<serial>]
 $ adb ss [<serial>]
 ```
