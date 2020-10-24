@@ -10,9 +10,9 @@
 $ git clone https://github.com/zpp0196/adbs.git && cd adbs
 $ git clone git@github.com:zpp0196/adbs.git && cd adbs
 # zsh
-$ install.sh && source ~/.zshrc
+$ ./install.sh && source ~/.zshrc
 # bash
-$ install.sh ~/.bashrc && source ~/.bashrc
+$ ./install.sh ~/.bashrc && source ~/.bashrc
 ```
 
 ## help
@@ -117,7 +117,7 @@ $ adb pkg [-c | -s | -3]
 >
 > `-3`: 仅列出第三方应用。
 >
-> 下面凡是参数为 `[<pkg>]` 的都可以替换为 `[<pkg> | -c | -s | -3]`
+> 下面凡是参数为 `[<pkg>]` 的都可以替换为 `[<pkg> | -c | -s | -3]`。
 
 eg.
 
@@ -227,7 +227,7 @@ $ adb (openurl | url) [<url>]
 $ adb (setclip | scp) [text] [-p] [-c]
 ```
 
-设置剪切板中的内容
+设置剪切板中的内容。
 
 > `-p`: 发送粘贴事件。
 >
