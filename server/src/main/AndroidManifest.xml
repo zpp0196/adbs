@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="me.zpp0196.adbs.server">
+
+    <application
+        android:label="adbs-server"
+        tools:ignore="all" />
+
+</manifest>

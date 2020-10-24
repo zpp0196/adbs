@@ -1,0 +1,18 @@
+# 兼容模式，忽略对原生命令的扩展和异常处理
+export ADBS_COMPAT_MODE=0
+
+# 默认序列号缓存文件
+export ADBS_SERIAL_FILE=/tmp/.adbs_serial
+
+# 截图/录屏文件名末尾时间戳部分的格式
+export ADBS_DATE_FORMAT=+%Y%m%d%H%M%S
+
+# fzf 选择命令，可根据自己喜好修改
+export ADBS_FZF="fzf --tac --height=7"
+
+# adb connect 时的 localhost 地址
+export ADBS_LOCALHOST=localhost
+
+export ADBS_AGENT=${ADBS_AGENT}
+export ADBS_PATH=${ADBS_PATH}
+export PATH=${ADBS_PATH}/bin:$PATH

@@ -1,0 +1,521 @@
+#!/usr/bin/env bash
+
+VERSION=1.0.0
+BUILD_DATE=1603506240
+
+ADB=$ADBS_AGENT
+COMPAT_MODE=$ADBS_COMPAT_MODE
+DATE_FORMAT=$ADBS_DATE_FORMAT
+FZF=$ADBS_FZF
+LOCALHOST=$ADBS_LOCALHOST
+SERIAL_FILE=$ADBS_SERIAL_FILE
+SERVER_FILE=$ADBS_PATH/server.apk
+
+EXT_NO_DEVICE=2
+EXT_CANCELLED=4
+
+NEED_SERIAL_CMDS=(
+    install
+    logcat
+    pull
+    push
+    reconnect
+    shell
+    tcpip
+    uninstall
+    \
+    is
+    us
+    pkg
+    ai
+    appinfo
+    pi
+    pkginfo
+    pp
+    pullapk
+    start
+    startapp
+    as
+    appsetting
+    dev
+    devopt
+    url
+    openurl
+    scp
+    setclip
+    sc
+    screencap
+    wr
+    winrecord
+    sr
+    screenrecord
+)
+
+function echoColorful() {
+    ext=$1
+    msg=$2
+
+    if [[ $ext == 0 ]]; then
+        echo -e "\033[032m$msg\033[0m"
+    else
+        echo -e "\033[031m$msg\033[0m"
+    fi
+    return $ext
+}
+
+if [[ -z $ADB ]]; then
+    echoColorful -1 "adb agent not found"
+    exit
+fi
+
+function execServerCommand() {
+    serial=$1
+    shift 1
+    args=$@
+
+    path="/data/local/tmp/adbs_server"
+    main="me.zpp0196.adbs.Server"
+    $ADB -s $serial push $SERVER_FILE $path &>/dev/null &&
+        $ADB -s $serial shell CLASSPATH=$path app_process / $main $args
+}
+
+function isDeviceOnline() {
+    serial=$1
+    $ADB devices | grep "^$serial[[:space:]]\+device" &>/dev/null
+}
+
+function selectSerial() {
+    serial=$1
+
+    if [[ -n $serial ]]; then
+        isDeviceOnline $serial
+        if [[ $? == 0 ]]; then
+            echo $serial
+            exit
+        fi
+    fi
+
+    devices=$($ADB devices | sed -n '/device$/p')
+    if [[ -z $devices ]]; then
+        exit $EXT_NO_DEVICE
+    elif [[ $(echo "$devices" | wc -l) == 1 ]]; then
+        serial=$(echo "$devices" | cut -f 1)
+    else
+        serial=$(echo "$devices" | $FZF | cut -f 1)
+        if [[ -z $serial ]]; then
+            exit $EXT_CANCELLED
+        fi
+    fi
+    echo $serial
+}
+
+function setSerial() {
+    serial=$1
+    serial=$(selectSerial $serial)
+    echoColorful $? "$serial"
+    if [[ $? != 0 ]]; then
+        exit
+    fi
+
+    echo $serial >$SERIAL_FILE
+}
+
+function getSerial() {
+    if [[ -f $SERIAL_FILE ]]; then
+        serial=$(cat $SERIAL_FILE)
+        isDeviceOnline $serial
+        echoColorful $? "$serial"
+    fi
+}
+
+function clearSerial() {
+    if [[ -f $SERIAL_FILE ]]; then
+        serial=$(cat $SERIAL_FILE)
+        isDeviceOnline $serial
+        echoColorful $? "$serial"
+        rm $SERIAL_FILE
+    fi
+}
+
+function connectLocalDevice() {
+    $ADB connect $LOCALHOST:$2
+}
+
+function disconnectDevice() {
+    if [[ $1 == "disconnect" && $COMPAT_MODE == 1 ]]; then
+        shift 1
+        $ADB disconnect $@
+        exit
+    fi
+
+    arg2=$2
+    if [[ $arg2 == "-a" ]]; then
+        $ADB disconnect
+        exit
+    fi
+
+    serial=$arg2
+    if [[ -z $serial ]]; then
+        devices=$($ADB devices | sed '1d')
+        if [[ -z $devices ]]; then
+            $ADB disconnect
+            exit
+        fi
+        serial=$($ADB devices | sed '1d;$d' | $FZF | cut -f 1)
+        if [[ -z $serial ]]; then
+            exit $EXT_CANCELLED
+        fi
+    fi
+
+    $ADB disconnect $serial
+}
+
+function disconnectSSHDevice() {
+    port=$1
+
+    if [[ -z $port ]]; then
+        port="$(adb devices | grep $LOCALHOST | $FZF | cut -f 1 | cut -d ':' -f 2)"
+        if [[ -z $port ]]; then
+            exit $EXT_CANCELLED
+        fi
+    fi
+
+    adb disconnect $LOCALHOST:$port
+    pkill -f "ssh -L $port"
+}
+
+function selectPackageWithSerial() {
+    serial=$1
+    arg2=$2
+    if [[ $arg2 == "-c" ]]; then
+        $ADB -s $serial shell dumpsys window | grep mFocusedApp | sed 's/.*\s\(.*\)\/.*/\1/' | sed -n '1p'
+        return
+    elif [[ -n $arg2 && $arg2 != "-s" && $arg2 != "-3" ]]; then
+        echo $arg2
+        return
+    fi
+
+    filter=$arg2
+    pkg=$($ADB -s $serial shell pm list package $filter | cut -d ':' -f 2 | $FZF)
+    if [[ -z $pkg ]]; then
+        exit $EXT_CANCELLED
+    fi
+
+    echo $pkg
+}
+
+function installWithSerial() {
+    serial=$1
+    cmd=$2
+    if [[ $cmd == "install" && $COMPAT_MODE == 1 ]]; then
+        shift 2
+        $ADB -s $serial install $@
+        exit
+    fi
+
+    if [[ $3 =~ .*apk$ ]]; then
+        apk=$3
+        shift 1
+    fi
+    shift 2
+    options=$@
+    if [[ -z $apk ]]; then
+        list=$(find . -name '*.apk')
+        if [[ -z $list ]]; then
+            echoColorful 1 "error: no matches found: *.apk"
+            exit
+        fi
+        apk=$(echo "$list" | $FZF)
+        if [[ -z $apk ]]; then
+            exit $EXT_CANCELLED
+        fi
+    fi
+
+    $ADB -s $serial install $options $apk
+}
+
+function uninstallWithSerial() {
+    serial=$1
+    cmd=$2
+    shift 2
+    if [[ $cmd == "uninstall" && $COMPAT_MODE == 1 ]]; then
+        $ADB -s $serial uninstall $@
+        exit
+    fi
+
+    pkg=$(selectPackageWithSerial $serial $@) || exit
+
+    if [[ $pkg == "-k" ]]; then
+        option="-k"
+        pkg=$(selectPackageWithSerial $serial) || exit
+    else
+        shift 1
+        option=$@
+    fi
+
+    $ADB -s $serial uninstall $option $pkg
+}
+
+function pullApkWithSerial() {
+    serial=$1
+    pkg=$(selectPackageWithSerial $@) || exit
+
+    ver=$($ADB -s $serial shell dumpsys package $pkg | grep versionName= | cut -d '=' -f 2)
+    path=$($ADB -s $serial shell pm path $pkg | cut -d ':' -f 2)
+    $ADB -s $serial pull $path ${pkg}_v${ver}.apk
+}
+
+function getApplicationInfoWithSerial() {
+    serial=$1
+    pkg=$(selectPackageWithSerial $@) || exit
+
+    execServerCommand $serial ai $pkg
+}
+
+function getPackageInfoWithSerial() {
+    serial=$1
+    pkg=$(selectPackageWithSerial $@) || exit
+
+    execServerCommand $serial pi $pkg
+}
+
+function startAppWithSerial() {
+    serial=$1
+    pkg=$(selectPackageWithSerial $@) || exit
+
+    shift 1
+    if [[ ${pkg:0:1} == "-" ]]; then
+        options=$@
+        pkg=$(selectPackageWithSerial $serial) || exit
+    else
+        shift 1
+        options=$@
+    fi
+
+    activity=$(execServerCommand $serial gla $pkg)
+    if [[ -z $activity ]]; then
+        echoColorful 1 "no activity found"
+        exit
+    fi
+
+    $ADB -s $serial shell am start $options $pkg/$activity
+}
+
+function startAppSettingWithSerial() {
+    serial=$1
+    pkg=$(selectPackageWithSerial $@) || exit
+
+    $ADB -s $serial shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS package:$pkg
+}
+
+function startDevOptionWithSerial() {
+    serial=$1
+
+    $ADB -s $serial shell am start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS
+}
+
+function openUrlWithSerial() {
+    serial=$1
+    url=$2
+
+    if [[ -n $url && ${url:0:4} != "http" ]]; then
+        url="http://$url"
+    fi
+
+    $ADB -s $serial shell am start -d $url
+}
+
+function setClipboardDataWithSerial() {
+    serial=$1
+    text=$2
+
+    execServerCommand $serial scp $text
+    
+    case $3 in
+    "-p") $ADB -s $serial shell input keyevent 279 ;;
+    "-i")
+        $ADB -s $serial shell input keyevent 279
+        execServerCommand $serial scp
+        ;;
+    esac
+}
+
+function screencapWithSerial() {
+    serial=$1
+    format=$2
+    if [[ -z $format ]]; then
+        format=$DATE_FORMAT
+    fi
+    name="screenshot_$(date $format).png"
+
+    $ADB -s $serial shell screencap -p >$name
+}
+
+function windowrecordWithSerial() {
+    serial=$1
+
+    while true; do
+        window=$($ADB -s $serial shell dumpsys window | grep mCurrentFocus | cut -d '=' -f 2) || exit
+        if [[ $window != "null" && $window != $last ]]; then
+            last=$window
+            echo $last
+        fi
+    done
+}
+
+function screenrecordWithSerial() {
+    serial=$1
+    arg2=$2
+    if [[ $opt == "--help" || $opt == "-h" ]]; then
+        $ADB -s $serial shell screenrecord --help
+        exit
+    fi
+
+    shift 1
+    if [[ ${arg2:0:2} == "--" ]]; then
+        options=$@
+    else
+        format=$arg2
+        shift 1
+        options=$@
+    fi
+    if [[ -z $format ]]; then
+        format=$DATE_FORMAT
+    fi
+    name="screenrecord_$(date $format).mp4"
+    path="/sdcard/$name"
+
+    trap "sleep 1 && $ADB -s $serial pull $path && $ADB -s $serial shell rm $path" INT
+    $ADB -s $serial shell screenrecord $path $options
+}
+
+function handleWithSerial() {
+    serial=$1
+    opt=$2
+
+    case $opt in
+    "pkg")
+        shift 2
+        selectPackageWithSerial $serial $@
+        ;;
+    "install" | "is")
+        shift 1
+        installWithSerial $serial $@
+        ;;
+    "uninstall" | "us")
+        shift 1
+        uninstallWithSerial $serial $@
+        ;;
+    "pullapk" | "pp")
+        shift 2
+        pullApkWithSerial $serial $@
+        ;;
+    "appinfo" | "ai")
+        shift 2
+        getApplicationInfoWithSerial $serial $@
+        ;;
+    "pkginfo" | "pi")
+        shift 2
+        getPackageInfoWithSerial $serial $@
+        ;;
+    "startapp" | "start")
+        shift 2
+        startAppWithSerial $serial $@
+        ;;
+    "appsetting" | "as")
+        shift 2
+        startAppSettingWithSerial $serial $@
+        ;;
+    "devopt" | "dev")
+        shift 2
+        startDevOptionWithSerial $serial $@
+        ;;
+    "openurl" | "url")
+        shift 2
+        openUrlWithSerial $serial $@
+        ;;
+    "setclip" | "scp")
+        shift 2
+        setClipboardDataWithSerial $serial $@
+        ;;
+    "screencap" | "sc")
+        shift 2
+        screencapWithSerial $serial $@
+        ;;
+    "winrecord" | "wr")
+        shift 2
+        windowrecordWithSerial $serial $@
+        ;;
+    "screenrecord" | "sr")
+        shift 2
+        screenrecordWithSerial $serial $@
+        ;;
+    *)
+        shift 1
+        $ADB -s $serial $@
+        ;;
+    esac
+}
+
+function handleWithoutSerial() {
+    if [[ -f $SERIAL_FILE ]]; then
+        serial=$(cat $SERIAL_FILE)
+        isDeviceOnline $serial
+        if [[ $? != 0 ]]; then
+            serial=""
+        fi
+    fi
+
+    serial=$(selectSerial $serial)
+    ext=$?
+    if [[ $ext == $EXT_NO_DEVICE ]]; then
+        if [[ $COMPAT_MODE == 1 ]]; then
+            $ADB $@
+        else
+            echoColorful 1 "error: no devices/emulators found"
+        fi
+    elif [[ $ext != 0 ]]; then
+        exit $ext
+    else
+        handleWithSerial $serial $@
+    fi
+}
+
+case $1 in
+"ds")
+    shift 1
+    $ADB devices $@
+    ;;
+"ss") setSerial $2 ;;
+"gs") getSerial ;;
+"cs") clearSerial ;;
+"serial")
+    case $2 in
+    "set") setSerial $3 ;;
+    "get") getSerial ;;
+    "clear") clearSerial ;;
+    esac
+    ;;
+"connect-localhost" | "cl") connectLocalDevice $@ ;;
+"disconnect" | "dc") disconnectDevice $@ ;;
+"disconnect-ssh" | "dcs")
+    shift 1
+    disconnectSSHDevice $@
+    ;;
+"ver" | "v")
+    echo -e "Version\t\t" $VERSION
+    echo -e "Build date\t" $(date --date="@$BUILD_DATE" '+%Y/%m/%d %H:%M:%S')
+    echo -e "Install path\t" $0
+    ;;
+"-s")
+    shift 1
+    handleWithSerial $@
+    ;;
+*)
+    if [[ $(echo "${NEED_SERIAL_CMDS[@]}" | grep -w $1) ]]; then
+        handleWithoutSerial $@
+    else
+        $ADB $@
+    fi
+    ;;
+esac
