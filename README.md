@@ -37,13 +37,15 @@ $ adb ss [<serial>]
 > 序列号默认保存到 `/tmp/.adbs_serial`，该路径可在 `~/.adbrc` 中修改。
 
 ```bash
-$ adb serial get
-$ adb gs
+$ adb serial get [-n]
+$ adb gs [-n]
 ```
 
 查看设置的默认序列号。
 
-> 输出颜色为绿色表示该设备在线，红色则表示该设备不在线。
+> 没有 `-n`: 输出颜色为绿色表示该设备在线，红色则表示该设备不在线。
+>
+> 有 `-n`: 如果该设备在线则直接输出序列号，否则选择一个设备并输出序列号。
 
 ```bash
 $ adb serial clear

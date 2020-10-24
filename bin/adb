@@ -121,10 +121,25 @@ function setSerial() {
 }
 
 function getSerial() {
+    option=$1
+
     if [[ -f $SERIAL_FILE ]]; then
         serial=$(cat $SERIAL_FILE)
-        isDeviceOnline $serial
-        echoColorful $? "$serial"
+        if [[ $option == "-n" ]]; then
+            isDeviceOnline $serial
+            if [[ $? == 0 ]]; then
+                echo $serial
+                return
+            fi
+        else
+            isDeviceOnline $serial
+            echoColorful $? "$serial"
+        fi
+    fi
+
+    if [[ $option == "-n" ]]; then
+        serial=$(selectSerial) || exit
+        echo $serial
     fi
 }
 
@@ -330,7 +345,7 @@ function setClipboardDataWithSerial() {
     text=$2
 
     execServerCommand $serial scp $text
-    
+
     case $3 in
     "-p") $ADB -s $serial shell input keyevent 279 ;;
     "-i")
@@ -487,12 +502,12 @@ case $1 in
     $ADB devices $@
     ;;
 "ss") setSerial $2 ;;
-"gs") getSerial ;;
+"gs") getSerial $2 ;;
 "cs") clearSerial ;;
 "serial")
     case $2 in
     "set") setSerial $3 ;;
-    "get") getSerial ;;
+    "get") getSerial $3 ;;
     "clear") clearSerial ;;
     esac
     ;;
