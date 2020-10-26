@@ -221,7 +221,7 @@ function installWithSerial() {
     cmd=$2
     if [[ $cmd == "install" && $COMPAT_MODE == 1 ]]; then
         shift 2
-        $ADB -s $serial install $@
+        $ADB -s $serial install "$@"
         exit
     fi
 
@@ -243,7 +243,7 @@ function installWithSerial() {
         fi
     fi
 
-    $ADB -s $serial install $options $apk
+    $ADB -s $serial install $options "$apk"
 }
 
 function uninstallWithSerial() {
@@ -329,19 +329,21 @@ function startDevOptionWithSerial() {
 function openUrlWithSerial() {
     serial=$1
     url=$2
+    url=${url// /\\ }
 
     if [[ -n $url && ${url:0:4} != "http" ]]; then
         url="http://$url"
     fi
 
-    $ADB -s $serial shell am start -d $url
+    $ADB -s $serial shell am start -d "$url"
 }
 
 function setClipboardDataWithSerial() {
     serial=$1
     text=$2
+    text=${text// /\\ }
 
-    execServerCommand $serial scp $text
+    execServerCommand $serial scp "$text"
 
     case $3 in
     "-p") $ADB -s $serial shell input keyevent 279 ;;
@@ -358,9 +360,10 @@ function screencapWithSerial() {
     if [[ -z $format ]]; then
         format=$DATE_FORMAT
     fi
-    name="screenshot_$(date $format).png"
+    name="screenshot_$(date "$format").png" || exit
 
-    $ADB -s $serial shell screencap -p >$name
+    $ADB -s $serial shell screencap -p >"$name" || exit
+    echo $name
 }
 
 function windowrecordWithSerial() {
@@ -394,11 +397,14 @@ function screenrecordWithSerial() {
     if [[ -z $format ]]; then
         format=$DATE_FORMAT
     fi
-    name="screenrecord_$(date $format).mp4"
+    name="screenrecord_$(date "$format").mp4" || exit
     path="/sdcard/$name"
-
-    trap "sleep 1 && $ADB -s $serial pull $path && $ADB -s $serial shell rm $path" INT
-    $ADB -s $serial shell screenrecord $path $options
+    path=${path// /\\ }
+    trap "sleep 1 && $ADB -s $serial pull $path >/dev/null; \
+        $ADB -s $serial shell rm \"$path\"" INT
+    $ADB -s $serial shell screenrecord $path $options || exit
+    echo
+    echo $name
 }
 
 function handleWithSerial() {
@@ -412,7 +418,7 @@ function handleWithSerial() {
         ;;
     "install" | "is")
         shift 1
-        installWithSerial $serial $@
+        installWithSerial $serial "$@"
         ;;
     "uninstall" | "us")
         shift 1
@@ -444,15 +450,15 @@ function handleWithSerial() {
         ;;
     "openurl" | "url")
         shift 2
-        openUrlWithSerial $serial $@
+        openUrlWithSerial $serial "$@"
         ;;
     "setclip" | "scp")
         shift 2
-        setClipboardDataWithSerial $serial $@
+        setClipboardDataWithSerial $serial "$@"
         ;;
     "screencap" | "sc")
         shift 2
-        screencapWithSerial $serial $@
+        screencapWithSerial $serial "$@"
         ;;
     "winrecord" | "wr")
         shift 2
@@ -460,7 +466,7 @@ function handleWithSerial() {
         ;;
     "screenrecord" | "sr")
         shift 2
-        screenrecordWithSerial $serial $@
+        screenrecordWithSerial $serial "$@"
         ;;
     *)
         shift 1
@@ -491,7 +497,7 @@ function handleWithoutSerial() {
     elif [[ $ext != 0 ]]; then
         exit $ext
     else
-        handleWithSerial $serial $@
+        handleWithSerial $serial "$@"
     fi
 }
 
@@ -513,7 +519,7 @@ case $1 in
     esac
     ;;
 "-sl")
-    handleWithoutSerial $@
+    handleWithoutSerial "$@"
     ;;
 "connect-localhost" | "cl") connectLocalDevice $@ ;;
 "disconnect" | "dc") disconnectDevice $@ ;;
@@ -528,11 +534,11 @@ case $1 in
     ;;
 "-s")
     shift 1
-    handleWithSerial $@
+    handleWithSerial "$@"
     ;;
 *)
     if [[ $(echo "${NEED_SERIAL_CMDS[@]}" | grep -w $1) ]]; then
-        handleWithoutSerial $@
+        handleWithoutSerial "$@"
     else
         $ADB $@
     fi
