@@ -470,7 +470,9 @@ function handleWithSerial() {
 }
 
 function handleWithoutSerial() {
-    if [[ -f $SERIAL_FILE ]]; then
+    if [[ $1 == "-sl" ]]; then
+        shift 1
+    elif [[ -f $SERIAL_FILE ]]; then
         serial=$(cat $SERIAL_FILE)
         isDeviceOnline $serial
         if [[ $? != 0 ]]; then
@@ -509,6 +511,9 @@ case $1 in
     "get") getSerial $3 ;;
     "clear") clearSerial ;;
     esac
+    ;;
+"-sl")
+    handleWithoutSerial $@
     ;;
 "connect-localhost" | "cl") connectLocalDevice $@ ;;
 "disconnect" | "dc") disconnectDevice $@ ;;

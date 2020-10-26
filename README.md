@@ -35,11 +35,19 @@ $ adb sl [<serial>]
 如果指定的设备在线则直接输出序列号，否则选择一个设备并输出序列号。
 
 ```bash
+$ adb -sl <cmd>
+```
+
+该命令等价于 `adb -s $(adb sl) <cmd>`。
+
+```bash
 $ adb serial set [<serial>]
 $ adb ss [<serial>]
 ```
 
 设置默认的设备序列号，从此告别 `adb -s <serial>`。
+
+如果需要在不修改默认序列号的情况下选择其它设备，请使用 `adb -sl`。
 
 > 序列号默认保存到 `/tmp/.adbs_serial`，该路径可在 `~/.adbrc` 中修改。
 
