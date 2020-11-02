@@ -9,6 +9,9 @@ export ADBS_DATE_FORMAT=+%Y%m%d%H%M%S
 
 # fzf 选择命令，可根据自己喜好修改
 export ADBS_FZF="fzf --tac --height=7"
+export ADBS_FZF_SERIAL="fzf --height=5"
+export ADBS_FZF_PACKAGE="fzf --height=12"
+export ADBS_FZF_FILE="fzf --height=12"
 
 # adb connect 时的 localhost 地址
 export ADBS_LOCALHOST=localhost

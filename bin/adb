@@ -7,9 +7,24 @@ ADB=$ADBS_AGENT
 COMPAT_MODE=$ADBS_COMPAT_MODE
 DATE_FORMAT=$ADBS_DATE_FORMAT
 FZF=$ADBS_FZF
+FZF_SERIAL=$ADBS_FZF_SERIAL
+FZF_PACKAGE=$ADBS_FZF_PACKAGE
+FZF_FILE=$ADBS_FZF_FILE
 LOCALHOST=$ADBS_LOCALHOST
 SERIAL_FILE=$ADBS_SERIAL_FILE
 SERVER_FILE=$ADBS_PATH/server.apk
+
+if [[ -z $FZF_SERIAL ]]; then
+    FZF_SERIAL=$FZF
+fi
+
+if [[ -z $FZF_PACKAGE ]]; then
+    FZF_PACKAGE=$FZF
+fi
+
+if [[ -z $FZF_FILE ]]; then
+    FZF_FILE=$FZF
+fi
 
 EXT_NO_DEVICE=2
 EXT_CANCELLED=4
@@ -101,7 +116,7 @@ function selectSerial() {
     elif [[ $(echo "$devices" | wc -l) == 1 ]]; then
         serial=$(echo "$devices" | cut -f 1)
     else
-        serial=$(echo "$devices" | $FZF | cut -f 1)
+        serial=$(echo "$devices" | $FZF_SERIAL | cut -f 1)
         if [[ -z $serial ]]; then
             exit $EXT_CANCELLED
         fi
@@ -173,7 +188,7 @@ function disconnectDevice() {
             $ADB disconnect
             exit
         fi
-        serial=$($ADB devices | sed '1d;$d' | $FZF | cut -f 1)
+        serial=$($ADB devices | sed '1d;$d' | $FZF_SERIAL | cut -f 1)
         if [[ -z $serial ]]; then
             exit $EXT_CANCELLED
         fi
@@ -186,7 +201,7 @@ function disconnectSSHDevice() {
     port=$1
 
     if [[ -z $port ]]; then
-        port="$(adb devices | grep $LOCALHOST | $FZF | cut -f 1 | cut -d ':' -f 2)"
+        port="$(adb devices | grep $LOCALHOST | $FZF_SERIAL | cut -f 1 | cut -d ':' -f 2)"
         if [[ -z $port ]]; then
             exit $EXT_CANCELLED
         fi
@@ -208,7 +223,7 @@ function selectPackageWithSerial() {
     fi
 
     filter=$arg2
-    pkg=$($ADB -s $serial shell pm list package $filter -u | cut -d ':' -f 2 | $FZF)
+    pkg=$($ADB -s $serial shell pm list package $filter -u | cut -d ':' -f 2 | $FZF_PACKAGE)
     if [[ -z $pkg ]]; then
         exit $EXT_CANCELLED
     fi
@@ -237,7 +252,7 @@ function installWithSerial() {
             echoColorful 1 "error: no matches found: *.apk"
             exit
         fi
-        apk=$(echo "$list" | $FZF)
+        apk=$(echo "$list" | $FZF_FILE)
         if [[ -z $apk ]]; then
             exit $EXT_CANCELLED
         fi
