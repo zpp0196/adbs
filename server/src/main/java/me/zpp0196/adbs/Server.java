@@ -111,6 +111,40 @@ public class Server {
                     cm.setPrimaryClip(data);
                 }
             }
+        },
+        FORMAT_APK_FILE("faf") {
+            @Override
+            protected void main(String[] args) throws Exception {
+                if (args.length < 2) {
+                    throw new IllegalArgumentException(Arrays.toString(args));
+                }
+                String packageName = args[0];
+                String path = args[1];
+                Context context = Utils.getSystemContext();
+                PackageManager pm = context.getPackageManager();
+                PackageInfo pi = pm.getPackageInfo(packageName, PackageManager.GET_UNINSTALLED_PACKAGES);
+                ApplicationInfo ai = pi.applicationInfo;
+                if (path.contains("${NAME}")) {
+                    path = path.replace("${NAME}", ai.loadLabel(pm));
+                }
+                if (path.contains("${PKG}")) {
+                    path = path.replace("${PKG}", packageName);
+                }
+                if (path.contains("${VRN}")) {
+                    path = path.replace("${VRN}", pi.versionName);
+                }
+                if (path.contains("${VRC}")) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        path = path.replace("${VRC}", String.valueOf(pi.getLongVersionCode()));
+                    } else {
+                        path = path.replace("${VRC}", String.valueOf(pi.versionCode));
+                    }
+                }
+                if (path.contains("${MD5}")) {
+                    path = path.replace("${MD5}", Utils.getMD5(ai.sourceDir));
+                }
+                System.out.println(path);
+            }
         };
 
         private List<String> opts;

@@ -11,19 +11,33 @@ FZF_SERIAL=$ADBS_FZF_SERIAL
 FZF_PACKAGE=$ADBS_FZF_PACKAGE
 FZF_FILE=$ADBS_FZF_FILE
 LOCALHOST=$ADBS_LOCALHOST
+APK_FILE_PATH=$ADBS_APK_FILE_PATH
+SCREENCAP_FILE_PATH=$ADBS_SCREENCAP_FILE_PATH
+SCREENRECORD_FILE_PATH=$ADBS_SCREENRECORD_FILE_PATH
+SCREENRECORD_SAVE_DIR=$ADBS_SCREENRECORD_SAVE_DIR
 SERIAL_FILE=$ADBS_SERIAL_FILE
 SERVER_FILE=$ADBS_PATH/server.apk
 
 if [[ -z $FZF_SERIAL ]]; then
     FZF_SERIAL=$FZF
 fi
-
 if [[ -z $FZF_PACKAGE ]]; then
     FZF_PACKAGE=$FZF
 fi
-
 if [[ -z $FZF_FILE ]]; then
     FZF_FILE=$FZF
+fi
+if [[ -z $APK_FILE_PATH ]]; then
+    APK_FILE_PATH='./${PKG}_v${VRN}_${MD5}.apk'
+fi
+if [[ -z $SCREENCAP_FILE_PATH ]]; then
+    SCREENCAP_FILE_PATH='./screenshot_${DATE}.png'
+fi
+if [[ -z $SCREENRECORD_FILE_PATH ]]; then
+    SCREENRECORD_FILE_PATH='./screenrecord_${DATE}.mp4'
+fi
+if [[ -z $SCREENRECORD_SAVE_DIR ]]; then
+    SCREENRECORD_SAVE_DIR='/sdcard/'
 fi
 
 EXT_NO_DEVICE=2
@@ -285,11 +299,37 @@ function uninstallWithSerial() {
 
 function pullApkWithSerial() {
     serial=$1
-    pkg=$(selectPackageWithSerial $@) || exit
+    shift 1
+    while [ $# != 0 ]; do
+        case $1 in
+        "-p")
+            pkg=$2
+            shift
+            ;;
+        "-o")
+            path=$2
+            shift 1
+            ;;
+        "-c" | "-s" | "-3")
+            break
+            ;;
+        esac
+        shift
+    done
 
-    ver=$($ADB -s $serial shell dumpsys package $pkg | grep versionName= | cut -d '=' -f 2)
-    path=$($ADB -s $serial shell pm path $pkg | cut -d ':' -f 2)
-    $ADB -s $serial pull $path ${pkg}_v${ver}.apk
+    if [[ -z $pkg ]]; then
+        pkg=$(selectPackageWithSerial $serial $@) || exit
+    fi
+    if [[ -z $path ]]; then
+        path=$APK_FILE_PATH
+    fi
+
+    path=${path//$/\\$}
+    path=$(execServerCommand $serial faf $pkg "$path")
+
+    _path=$($ADB -s $serial shell pm path $pkg | cut -d ':' -f 2)
+    $ADB -s $serial pull $_path "$path" &>/dev/null || exit
+    echo $path
 }
 
 function getApplicationInfoWithSerial() {
@@ -371,14 +411,17 @@ function setClipboardDataWithSerial() {
 
 function screencapWithSerial() {
     serial=$1
-    format=$2
-    if [[ -z $format ]]; then
-        format=$DATE_FORMAT
+    path=$2
+    if [[ -z $path ]]; then
+        path=$SCREENCAP_FILE_PATH
     fi
-    name="screenshot_$(date "$format").png" || exit
+    date=$(date $DATE_FORMAT) || exit
+    sed_date='sed s/${DATE}/'$date'/'
+    sed_serial='sed s/${SERIAL}/'$serial'/'
+    path=$(echo $path | $sed_date | $sed_serial)
 
-    $ADB -s $serial shell screencap -p >"$name" || exit
-    echo $name
+    $ADB -s $serial shell screencap -p >"$path" || exit
+    echo $path
 }
 
 function windowrecordWithSerial() {
@@ -395,31 +438,35 @@ function windowrecordWithSerial() {
 
 function screenrecordWithSerial() {
     serial=$1
-    arg2=$2
+    opt=$2
     if [[ $opt == "--help" || $opt == "-h" ]]; then
         $ADB -s $serial shell screenrecord --help
         exit
     fi
 
     shift 1
-    if [[ ${arg2:0:2} == "--" ]]; then
+    case $opt in
+    "-o")
+        path=$2
+        shift 2
         options=$@
-    else
-        format=$arg2
-        shift 1
+        ;;
+    *)
+        path=$SCREENRECORD_FILE_PATH
         options=$@
-    fi
-    if [[ -z $format ]]; then
-        format=$DATE_FORMAT
-    fi
-    name="screenrecord_$(date "$format").mp4" || exit
-    path="/sdcard/$name"
-    path=${path// /\\ }
-    trap "sleep 1 && $ADB -s $serial pull $path >/dev/null; \
-        $ADB -s $serial shell rm \"$path\"" INT
-    $ADB -s $serial shell screenrecord $path $options || exit
-    echo
-    echo $name
+        ;;
+    esac
+
+    date=$(date $DATE_FORMAT) || exit
+    sed_date='sed s/${DATE}/'$date'/'
+    sed_serial='sed s/${SERIAL}/'$serial'/'
+    path=$(echo $path | $sed_date | $sed_serial)
+
+    _path=$SCREENRECORD_SAVE_DIR$(date +%Y%m%d%H%M%S).mp4
+    _path=${_path// /\\ }
+    trap "sleep 1 && $ADB -s $serial pull $_path \"$path\">/dev/null; \
+        $ADB -s $serial shell rm \"$_path\" ; echo ; echo $path" INT
+    $ADB -s $serial shell screenrecord $_path $options || exit
 }
 
 function handleWithSerial() {
