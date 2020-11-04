@@ -2,7 +2,6 @@
 
 adb=$(which adb)
 path=$(pwd)
-adbrc="$HOME/.adbrc"
 xshrc="$HOME/.zshrc"
 
 if [[ -n $1 ]]; then
@@ -14,19 +13,11 @@ if [[ ! -f $adb ]]; then
     exit 1
 fi
 
-if [[ ! -f $adbrc ]]; then
-    cp .adbrc $adbrc
-fi
-
-sed -i "s/\${ADBS_AGENT}/${adb////\\/}/" $adbrc
-sed -i "s/\${ADBS_PATH}/${path////\\/}/" $adbrc
-
 if [[ ! -f $xshrc ]]; then
     touch $xshrc
 fi
 
-if [[ -z $(cat $xshrc | sed -n '/.*adbrc/p') ]]; then
-    echo "[ -f $adbrc ] && source $adbrc" >>$xshrc
-fi
+echo "export ADBS_AGENT=$adb" >>$xshrc
+echo 'export PATH='$path'/bin:$PATH' >>$xshrc
 
 echo "installed for $xshrc"

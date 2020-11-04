@@ -4,41 +4,57 @@ VERSION=1.0.1
 BUILD_DATE=1603704600
 
 ADB=$ADBS_AGENT
-COMPAT_MODE=$ADBS_COMPAT_MODE
-DATE_FORMAT=$ADBS_DATE_FORMAT
-FZF=$ADBS_FZF
-FZF_SERIAL=$ADBS_FZF_SERIAL
-FZF_PACKAGE=$ADBS_FZF_PACKAGE
-FZF_FILE=$ADBS_FZF_FILE
-LOCALHOST=$ADBS_LOCALHOST
-APK_FILE_PATH=$ADBS_APK_FILE_PATH
-SCREENCAP_FILE_PATH=$ADBS_SCREENCAP_FILE_PATH
-SCREENRECORD_FILE_PATH=$ADBS_SCREENRECORD_FILE_PATH
-SCREENRECORD_SAVE_DIR=$ADBS_SCREENRECORD_SAVE_DIR
-SERIAL_FILE=$ADBS_SERIAL_FILE
-SERVER_FILE=$ADBS_PATH/server.apk
+ROOT=$(dirname $0)/../
+CONFIG=$ROOT/.properties
 
-if [[ -z $FZF_SERIAL ]]; then
-    FZF_SERIAL=$FZF
-fi
-if [[ -z $FZF_PACKAGE ]]; then
-    FZF_PACKAGE=$FZF
-fi
-if [[ -z $FZF_FILE ]]; then
-    FZF_FILE=$FZF
-fi
-if [[ -z $APK_FILE_PATH ]]; then
-    APK_FILE_PATH='./${PKG}_v${VRN}_${MD5}.apk'
-fi
-if [[ -z $SCREENCAP_FILE_PATH ]]; then
-    SCREENCAP_FILE_PATH='./screenshot_${DATE}.png'
-fi
-if [[ -z $SCREENRECORD_FILE_PATH ]]; then
-    SCREENRECORD_FILE_PATH='./screenrecord_${DATE}.mp4'
-fi
-if [[ -z $SCREENRECORD_SAVE_DIR ]]; then
-    SCREENRECORD_SAVE_DIR='/sdcard/'
-fi
+function getConfig() {
+    if [[ ! -f "$CONFIG" ]]; then
+        echo $2
+        return
+    fi
+
+    val=$(grep -P "^\s*[^#]?${1}=.*$" $CONFIG | cut -d '=' -f 1 --complement)
+    if [[ -z $val ]]; then
+        val=$2
+    fi
+    echo $val
+}
+
+function setConfig() {
+    key=$1
+    val=$2
+
+    if [[ ! -f $CONFIG ]]; then
+        touch $CONFIG
+    fi
+
+    if [[ $(grep -P "^\s*[^#]?${key}=.*$" $CONFIG) ]]; then
+        val=${val////\\/}
+        sed -i "s/$key=.*/$key=${val}/g" $CONFIG
+    else
+        echo $key=$val >>$CONFIG
+    fi
+}
+
+function resetConfig() {
+    key=$1
+
+    if [[ ! -f $CONFIG ]]; then
+        return
+    fi
+
+    sed -i "/$key=.*/d" $CONFIG
+}
+
+COMPAT_MODE=$(getConfig global.compat 0)
+LOCALHOST=$(getConfig global.localhost localhost)
+
+FZF_SERIAL=$(getConfig fzf.serial 'fzf --layout=reverse --inline-info --height=5')
+FZF_PACKAGE=$(getConfig fzf.package 'fzf --layout=reverse --inline-info --height=12')
+FZF_FILE=$(getConfig fzf.file 'fzf --layout=reverse --inline-info --height=12')
+
+SERIAL_FILE=$(getConfig global.serial.file '/tmp/.adbs_serial')
+SERVER_FILE=$ROOT/server.apk
 
 EXT_NO_DEVICE=2
 EXT_CANCELLED=4
@@ -56,8 +72,8 @@ NEED_SERIAL_CMDS=(
     is
     us
     pkg
-    ai
-    appinfo
+    dp
+    dumppkg
     pi
     pkginfo
     pp
@@ -320,30 +336,29 @@ function pullApkWithSerial() {
     if [[ -z $pkg ]]; then
         pkg=$(selectPackageWithSerial $serial $@) || exit
     fi
-    if [[ -z $path ]]; then
-        path=$APK_FILE_PATH
-    fi
 
-    path=${path//$/\\$}
-    path=$(execServerCommand $serial faf $pkg "$path")
+    if [[ -z $path ]]; then
+        path=$(getConfig pullapk.output './$(adb -s ${serial} pi ${pkg} --label)_${pkg}_v$(adb -s ${serial} pi ${pkg} --version-name)_$(adb -s ${serial} pi ${pkg} --md5).apk')
+        path=$(eval "echo "$path"")
+    fi
 
     _path=$($ADB -s $serial shell pm path $pkg | cut -d ':' -f 2)
     $ADB -s $serial pull $_path "$path" &>/dev/null || exit
     echo $path
 }
 
-function getApplicationInfoWithSerial() {
+function dumpPackageInfoWithSerial() {
     serial=$1
     pkg=$(selectPackageWithSerial $@) || exit
 
-    execServerCommand $serial ai $pkg
+    execServerCommand $serial dp $pkg
 }
 
 function getPackageInfoWithSerial() {
     serial=$1
-    pkg=$(selectPackageWithSerial $@) || exit
+    shift 1
 
-    execServerCommand $serial pi $pkg
+    execServerCommand $serial pi $@
 }
 
 function startAppWithSerial() {
@@ -411,14 +426,12 @@ function setClipboardDataWithSerial() {
 
 function screencapWithSerial() {
     serial=$1
-    path=$2
-    if [[ -z $path ]]; then
-        path=$SCREENCAP_FILE_PATH
+    if [[ -z $2 ]]; then
+        path=$(getConfig screencap.output './screenshot_$(date +%Y%m%d%H%M%S).png')
+        path=$(eval "echo "$path"")
+    else
+        path=$2
     fi
-    date=$(date $DATE_FORMAT) || exit
-    sed_date='sed s/${DATE}/'$date'/'
-    sed_serial='sed s/${SERIAL}/'$serial'/'
-    path=$(echo $path | $sed_date | $sed_serial)
 
     $ADB -s $serial shell screencap -p >"$path" || exit
     echo $path
@@ -438,31 +451,27 @@ function windowrecordWithSerial() {
 
 function screenrecordWithSerial() {
     serial=$1
-    opt=$2
-    if [[ $opt == "--help" || $opt == "-h" ]]; then
+    if [[ $2 == "--help" || $2 == "-h" ]]; then
         $ADB -s $serial shell screenrecord --help
         exit
     fi
 
     shift 1
-    case $opt in
+    case $2 in
     "-o")
         path=$2
         shift 2
         options=$@
         ;;
     *)
-        path=$SCREENRECORD_FILE_PATH
+        path=$(getConfig screenrecord.output './screenrecord_$(date +%Y%m%d%H%M%S).mp4')
+        path=$(eval "echo "$path"")
         options=$@
         ;;
     esac
 
-    date=$(date $DATE_FORMAT) || exit
-    sed_date='sed s/${DATE}/'$date'/'
-    sed_serial='sed s/${SERIAL}/'$serial'/'
-    path=$(echo $path | $sed_date | $sed_serial)
-
-    _path=$SCREENRECORD_SAVE_DIR$(date +%Y%m%d%H%M%S).mp4
+    _path=$(getConfig screenrecord.cache '/sdcard/$(date +%Y%m%d%H%M%S).mp4')
+    _path=$(eval "echo "$_path"")
     _path=${_path// /\\ }
     trap "sleep 1 && $ADB -s $serial pull $_path \"$path\">/dev/null; \
         $ADB -s $serial shell rm \"$_path\" ; echo ; echo $path" INT
@@ -490,9 +499,9 @@ function handleWithSerial() {
         shift 2
         pullApkWithSerial $serial $@
         ;;
-    "appinfo" | "ai")
+    "dumppkg" | "dp")
         shift 2
-        getApplicationInfoWithSerial $serial $@
+        dumpPackageInfoWithSerial $serial $@
         ;;
     "pkginfo" | "pi")
         shift 2
@@ -564,6 +573,14 @@ function handleWithoutSerial() {
 }
 
 case $1 in
+"config")
+    case $2 in
+    "list") cat $CONFIG ;;
+    "get") echo $(getConfig "$3" '') ;;
+    "set") setConfig "$3" "$4" ;;
+    "reset") resetConfig "$3" ;;
+    esac
+    ;;
 "ds")
     shift 1
     $ADB devices $@

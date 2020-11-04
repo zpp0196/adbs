@@ -20,7 +20,7 @@ import java.util.List;
 public class Server {
 
     private enum Handler {
-        PKG_INFO("pkginfo", "pi") {
+        DUMP_PKG("dumppkg", "dp") {
             @Override
             protected void main(String[] args) throws Exception {
                 if (args.length == 0) {
@@ -32,68 +32,106 @@ public class Server {
                 PackageInfo pi = pm.getPackageInfo(packageName, PackageManager.GET_UNINSTALLED_PACKAGES);
                 ApplicationInfo ai = pi.applicationInfo;
 
-                echo("应用名称", ai.loadLabel(pm), 2);
-                echo("应用包名 ", packageName, 2);
-                echo("应用版本", pi.versionName, 2);
+                echo("UID", ai.uid, 3);
+                echo("名称", ai.loadLabel(pm), 2);
+                echo("包名 ", packageName, 2);
+                echo("版本名", pi.versionName, 2);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    echo("应用版本号", pi.getLongVersionCode(), 2);
+                    echo("版本号", pi.getLongVersionCode(), 2);
                 } else {
-                    echo("应用版本号", pi.versionCode, 2);
+                    echo("版本号", pi.versionCode, 2);
+                }
+                echo("数据路径", ai.dataDir, 2);
+                String installer = pm.getInstallerPackageName(packageName);
+                if (installer != null) {
+                    CharSequence appName = pm.getApplicationInfo(installer, 0).loadLabel(pm);
+                    installer = String.format("%s(%s)", appName, installer);
+                }
+                echo("安装来源", installer, 2);
+                Intent launcherIntent = pm.getLaunchIntentForPackage(packageName);
+                if (launcherIntent != null) {
+                    ComponentName component = launcherIntent.getComponent();
+                    if (component != null) {
+                        echo("启动界面", component.getClassName(), 2);
+                    }
                 }
                 echo("安装包路径", ai.sourceDir, 2);
                 echo("安装包 MD5", Utils.getMD5(ai.sourceDir), 2);
                 echo("安装包大小", Utils.getApkSize(ai.sourceDir), 2);
                 echo("首次安装时间", Utils.formatTime(pi.firstInstallTime), 1);
                 echo("最后更新时间", Utils.formatTime(pi.lastUpdateTime), 1);
-                String installer = pm.getInstallerPackageName(packageName);
-                if (installer != null) {
-                    CharSequence appName = pm.getApplicationInfo(installer, 0).loadLabel(pm);
-                    installer = String.format("%s(%s)", appName, installer);
-                }
-                echo("应用安装来源", installer, 1);
             }
         },
-        APP_INFO("appinfo", "ai") {
+        PKG_INFO("pkginfo", "pi") {
             @Override
             protected void main(String[] args) throws Exception {
                 if (args.length == 0) {
                     throw new IllegalArgumentException("No package name specified!");
                 }
-                String packageName = args[0];
-                Context context = Utils.getSystemContext();
-                PackageManager pm = context.getPackageManager();
-
-                ApplicationInfo ai = pm.getApplicationInfo(packageName, PackageManager.GET_UNINSTALLED_PACKAGES);
-                echo("应用名称", ai.loadLabel(pm), 2);
-                echo("应用包名 ", packageName, 2);
-                echo("应用 UID", ai.uid, 2);
-                echo("应用数据目录", ai.dataDir, 1);
-
-                Intent launcherIntent = pm.getLaunchIntentForPackage(packageName);
-                if (launcherIntent != null) {
-                    ComponentName component = launcherIntent.getComponent();
-                    if (component != null) {
-                        echo("应用启动界面", component.getClassName(), 1);
-                    }
-                }
-            }
-        },
-        GET_LAUNCHER_ACTIVITY("gla") {
-            @Override
-            protected void main(String[] args) throws Exception {
-                if (args.length == 0) {
-                    throw new IllegalArgumentException("No package name specified!");
+                if (args.length == 1) {
+                    Handler.DUMP_PKG.main(args);
+                    return;
                 }
                 String packageName = args[0];
+                String opt = args[1];
                 Context context = Utils.getSystemContext();
                 PackageManager pm = context.getPackageManager();
+                PackageInfo pi = pm.getPackageInfo(packageName, PackageManager.GET_UNINSTALLED_PACKAGES);
+                ApplicationInfo ai = pi.applicationInfo;
 
-                Intent launcherIntent = pm.getLaunchIntentForPackage(packageName);
-                if (launcherIntent != null) {
-                    ComponentName component = launcherIntent.getComponent();
-                    if (component != null) {
-                        System.out.println(component.getClassName());
-                    }
+                switch (opt) {
+                    case "-u":
+                    case "-uid":
+                        System.out.println(ai.uid);
+                        return;
+                    case "-l":
+                    case "--label":
+                        System.out.println(ai.loadLabel(pm));
+                        return;
+                    case "-v":
+                    case "--version-name":
+                        System.out.println(pi.versionName);
+                        return;
+                    case "-c":
+                    case "--version-code":
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            System.out.println(pi.getLongVersionCode());
+                        } else {
+                            System.out.println(pi.versionCode);
+                        }
+                        return;
+                    case "-d":
+                    case "--data":
+                        System.out.println(ai.dataDir);
+                        return;
+                    case "--installer":
+                        System.out.println(pm.getInstallerPackageName(packageName));
+                        return;
+                    case "-m":
+                    case "-splash":
+                        Intent launcherIntent = pm.getLaunchIntentForPackage(packageName);
+                        if (launcherIntent != null) {
+                            ComponentName component = launcherIntent.getComponent();
+                            if (component != null) {
+                                System.out.println(component.getClassName());
+                                return;
+                            }
+                        }
+                        System.exit(1);
+                        return;
+                    case "-p":
+                    case "--path":
+                        System.out.println(ai.sourceDir);
+                        return;
+                    case "-5":
+                    case "--md5":
+                        System.out.println(Utils.getMD5(ai.sourceDir));
+                        return;
+                    case "--apk-size":
+                        System.out.println(Utils.getApkSize(ai.sourceDir));
+                        return;
+                    case "-i":
+                    default:
                 }
             }
         },
@@ -110,40 +148,6 @@ public class Server {
                 if (cm != null) {
                     cm.setPrimaryClip(data);
                 }
-            }
-        },
-        FORMAT_APK_FILE("faf") {
-            @Override
-            protected void main(String[] args) throws Exception {
-                if (args.length < 2) {
-                    throw new IllegalArgumentException(Arrays.toString(args));
-                }
-                String packageName = args[0];
-                String path = args[1];
-                Context context = Utils.getSystemContext();
-                PackageManager pm = context.getPackageManager();
-                PackageInfo pi = pm.getPackageInfo(packageName, PackageManager.GET_UNINSTALLED_PACKAGES);
-                ApplicationInfo ai = pi.applicationInfo;
-                if (path.contains("${NAME}")) {
-                    path = path.replace("${NAME}", ai.loadLabel(pm));
-                }
-                if (path.contains("${PKG}")) {
-                    path = path.replace("${PKG}", packageName);
-                }
-                if (path.contains("${VRN}")) {
-                    path = path.replace("${VRN}", pi.versionName);
-                }
-                if (path.contains("${VRC}")) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        path = path.replace("${VRC}", String.valueOf(pi.getLongVersionCode()));
-                    } else {
-                        path = path.replace("${VRC}", String.valueOf(pi.versionCode));
-                    }
-                }
-                if (path.contains("${MD5}")) {
-                    path = path.replace("${MD5}", Utils.getMD5(ai.sourceDir));
-                }
-                System.out.println(path);
             }
         };
 
