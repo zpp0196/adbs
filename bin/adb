@@ -432,7 +432,6 @@ function screencapWithSerial() {
     else
         path=$2
     fi
-
     $ADB -s $serial shell screencap -p >"$path" || exit
     echo $path
 }
@@ -470,11 +469,21 @@ function screenrecordWithSerial() {
         ;;
     esac
 
+    show_touches=$($ADB -s $serial shell settings get system show_touches)
+    if [[ $show_touches == null ]]; then
+        show_touches=0
+    fi
+    if [[ $(getConfig screenrecord.touches 1) == 1 ]]; then
+        $ADB -s $serial shell settings put system show_touches 1
+    fi
+
     _path=$(getConfig screenrecord.cache '/sdcard/$(date +%Y%m%d%H%M%S).mp4')
     _path=$(eval "echo "$_path"")
     _path=${_path// /\\ }
     trap "sleep 1 && $ADB -s $serial pull $_path \"$path\">/dev/null; \
-        $ADB -s $serial shell rm \"$_path\" ; echo ; echo $path" INT
+        $ADB -s $serial shell rm \"$_path\" ; \
+        $ADB -s $serial shell settings put system show_touches $show_touches ; \
+        echo ; echo $path" INT
     $ADB -s $serial shell screenrecord $_path $options || exit
 }
 
