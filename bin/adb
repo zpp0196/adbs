@@ -374,7 +374,7 @@ function startAppWithSerial() {
         options=$@
     fi
 
-    activity=$(execServerCommand $serial gla $pkg)
+    activity=$(execServerCommand $serial pi $pkg -m)
     if [[ -z $activity ]]; then
         echoColorful 1 "no activity found"
         exit
