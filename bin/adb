@@ -264,31 +264,31 @@ function selectPackageWithSerial() {
 function installWithSerial() {
     serial=$1
     cmd=$2
-    if [[ $cmd == "install" && $COMPAT_MODE == 1 ]]; then
-        shift 2
-        $ADB -s $serial install "$@"
+    shift 2
+    args="$@"
+
+    for arg in $args; do
+        if [[ $arg =~ .*apk$ ]]; then
+            apk=$arg
+        fi
+    done
+
+    if [[ -n $apk ]]; then
+        $ADB -s $serial install $args
         exit
     fi
 
-    if [[ $3 =~ .*apk$ ]]; then
-        apk=$3
-        shift 1
+    list=$(find . -name '*.apk')
+    if [[ -z $list ]]; then
+        echoColorful 1 "error: no matches found: *.apk"
+        exit
     fi
-    shift 2
-    options=$@
+    apk=$(echo "$list" | $FZF_FILE)
     if [[ -z $apk ]]; then
-        list=$(find . -name '*.apk')
-        if [[ -z $list ]]; then
-            echoColorful 1 "error: no matches found: *.apk"
-            exit
-        fi
-        apk=$(echo "$list" | $FZF_FILE)
-        if [[ -z $apk ]]; then
-            exit $EXT_CANCELLED
-        fi
+        exit $EXT_CANCELLED
     fi
 
-    $ADB -s $serial install $options "$apk"
+    $ADB -s $serial install $args "$apk"
 }
 
 function uninstallWithSerial() {
