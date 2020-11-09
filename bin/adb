@@ -199,32 +199,20 @@ function connectLocalDevice() {
 }
 
 function disconnectDevice() {
-    if [[ $1 == "disconnect" && $COMPAT_MODE == 1 ]]; then
-        shift 1
-        $ADB disconnect $@
-        exit
-    fi
-
-    arg2=$2
-    if [[ $arg2 == "-a" ]]; then
-        $ADB disconnect
-        exit
-    fi
-
-    serial=$arg2
-    if [[ -z $serial ]]; then
+    case $2 in
+    "-s")
         devices=$($ADB devices | sed '1d')
-        if [[ -z $devices ]]; then
-            $ADB disconnect
-            exit
+        if [[ -n $devices ]]; then
+            serial=$($ADB devices | sed '1d;$d' | $FZF_SERIAL | cut -f 1)
+            if [[ -z $serial ]]; then
+                exit $EXT_CANCELLED
+            fi
         fi
-        serial=$($ADB devices | sed '1d;$d' | $FZF_SERIAL | cut -f 1)
-        if [[ -z $serial ]]; then
-            exit $EXT_CANCELLED
-        fi
-    fi
+        $ADB disconnect $serial
+        ;;
 
-    $ADB disconnect $serial
+    *) $ADB "$@" ;;
+    esac
 }
 
 function disconnectSSHDevice() {
