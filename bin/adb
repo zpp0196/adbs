@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-VERSION=1.0.1
-BUILD_DATE=1603704600
+VERSION=1.0.2
+BUILD_DATE=1604937600
 
 ADB=$ADBS_AGENT
 ROOT=$(dirname $0)/../
