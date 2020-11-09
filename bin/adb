@@ -291,7 +291,7 @@ function uninstallWithSerial() {
     serial=$1
     shift 2
     case $1 in
-    "-s")
+    "-s" | "")
         pkg=$(selectPackageWithSerial $serial) || exit
         $ADB -s $serial uninstall "$@" $pkg
         ;;
