@@ -46,7 +46,6 @@ function resetConfig() {
     sed -i "/$key=.*/d" $CONFIG
 }
 
-COMPAT_MODE=$(getConfig global.compat 0)
 LOCALHOST=$(getConfig global.localhost localhost)
 
 FZF_SERIAL=$(getConfig fzf.serial 'fzf --layout=reverse --inline-info --height=5')
@@ -555,11 +554,7 @@ function handleWithoutSerial() {
     serial=$(selectSerial $serial)
     ext=$?
     if [[ $ext == $EXT_NO_DEVICE ]]; then
-        if [[ $COMPAT_MODE == 1 ]]; then
-            $ADB $@
-        else
-            echoColorful 1 "error: no devices/emulators found"
-        fi
+        $ADB shell
     elif [[ $ext != 0 ]]; then
         exit $ext
     else
