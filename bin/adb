@@ -576,7 +576,7 @@ case $1 in
     "reset") resetConfig "$3" ;;
     esac
     ;;
-"ds")
+"ls")
     shift 1
     $ADB devices $@
     ;;
