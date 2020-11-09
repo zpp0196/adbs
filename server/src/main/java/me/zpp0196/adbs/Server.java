@@ -104,6 +104,7 @@ public class Server {
                     case "--data":
                         System.out.println(ai.dataDir);
                         return;
+                    case "-i":
                     case "--installer":
                         System.out.println(pm.getInstallerPackageName(packageName));
                         return;
@@ -130,7 +131,6 @@ public class Server {
                     case "--apk-size":
                         System.out.println(Utils.getApkSize(ai.sourceDir));
                         return;
-                    case "-i":
                     default:
                 }
             }
