@@ -216,17 +216,23 @@ function disconnectDevice() {
 }
 
 function disconnectSSHDevice() {
-    port=$1
-
-    if [[ -z $port ]]; then
-        port="$(adb devices | grep $LOCALHOST | $FZF_SERIAL | cut -f 1 | cut -d ':' -f 2)"
+    case $1 in
+    "-a")
+        $ADB devices | grep $LOCALHOST | cut -f 1 | cut -d ':' -f 2 |
+            xargs -i $0 disconnect-ssh {}
+        ;;
+    *)
+        port=$1
         if [[ -z $port ]]; then
-            exit $EXT_CANCELLED
+            port="$($ADB devices | grep $LOCALHOST | $FZF_SERIAL | cut -f 1 | cut -d ':' -f 2)"
+            if [[ -z $port ]]; then
+                exit $EXT_CANCELLED
+            fi
         fi
-    fi
-
-    adb disconnect $LOCALHOST:$port
-    pkill -f "ssh -L $port"
+        adb disconnect $LOCALHOST:$port
+        pkill -f "ssh -L $port"
+        ;;
+    esac
 }
 
 function selectPackageWithSerial() {
