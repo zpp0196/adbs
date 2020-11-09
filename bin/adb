@@ -272,6 +272,7 @@ function installWithSerial() {
     fi
 
     paths=$(getConfig install.paths ".")
+    paths=$(eval echo "$paths")
 
     list=$(find $paths -name '*.apk')
     if [[ -z $list ]]; then
