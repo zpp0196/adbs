@@ -287,24 +287,16 @@ function installWithSerial() {
 
 function uninstallWithSerial() {
     serial=$1
-    cmd=$2
     shift 2
-    if [[ $cmd == "uninstall" && $COMPAT_MODE == 1 ]]; then
-        $ADB -s $serial uninstall $@
-        exit
-    fi
-
-    pkg=$(selectPackageWithSerial $serial $@) || exit
-
-    if [[ $pkg == "-k" ]]; then
-        option="-k"
+    case $1 in
+    "-s")
         pkg=$(selectPackageWithSerial $serial) || exit
-    else
-        shift 1
-        option=$@
-    fi
-
-    $ADB -s $serial uninstall $option $pkg
+        $ADB -s $serial uninstall "$@" $pkg
+        ;;
+    *)
+        $ADB -s $serial uninstall "$@"
+        ;;
+    esac
 }
 
 function pullApkWithSerial() {
