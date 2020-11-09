@@ -7,8 +7,8 @@ if [[ -n $1 ]]; then
     xshrc=$1
 fi
 
-sed -i '/.*.ADBS_AGENT/d' $xshrc
+sed -i -e '/.*.ADBS_AGENT/d' $xshrc
 path=${path////\\/}
-sed -i '/.*.'$path'\/bin/d' $xshrc
+sed -i -e '/.*.'$path'\/bin/d' $xshrc
 
 echo "uninstalled from $xshrc"
