@@ -271,7 +271,9 @@ function installWithSerial() {
         exit
     fi
 
-    list=$(find . -name '*.apk')
+    paths=$(getConfig install.paths ".")
+
+    list=$(find $paths -name '*.apk')
     if [[ -z $list ]]; then
         echoColorful 1 "error: no matches found: *.apk"
         exit
