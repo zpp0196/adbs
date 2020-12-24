@@ -330,7 +330,7 @@ function pullApkWithSerial() {
         path=$(eval "echo "$path"")
     fi
 
-    _path=$($ADB -s $serial shell pm path $pkg | cut -d ':' -f 2)
+    _path=$(execServerCommand $serial pi $pkg --path)
     $ADB -s $serial pull $_path "$path" &>/dev/null || exit
     echo $path
 }
