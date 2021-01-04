@@ -64,7 +64,6 @@ NEED_SERIAL_CMDS=(
     pull
     push
     reboot
-    reconnect
     shell
     tcpip
     uninstall
@@ -86,6 +85,8 @@ NEED_SERIAL_CMDS=(
     devopt
     url
     openurl
+    reconnect-remote
+    rr
     scp
     setclip
     sc
@@ -196,6 +197,41 @@ function clearSerial() {
 
 function connectLocalDevice() {
     $ADB connect $LOCALHOST:$2
+}
+
+function reconnectRemoteDevice() {
+    shift 1
+    devices=$($ADB devices | sed '1d' | grep ':')
+    if [[ -z $devices ]]; then
+        echoColorful $EXT_NO_DEVICE "error: no matched devices"
+        exit $EXT_NO_DEVICE
+    fi
+    device="$(echo $devices | $FZF_SERIAL | cut -f 1)"
+    if [[ -z $device ]]; then
+        exit $EXT_CANCELLED
+    fi
+
+    ipAndPort=(${device//:/ })
+    ip=${ipAndPort[0]}
+    port=${ipAndPort[1]}
+
+    for i in {1..10}; do
+        $ADB disconnect $ip:$port &>/dev/null
+        $ADB connect $ip:$port
+        $ADB -s $ip:$port shell echo TEST &>/dev/null
+        if [[ $? == 0 ]]; then
+            if [[ -f $SERIAL_FILE ]]; then
+                serial=$(cat $SERIAL_FILE)
+                if [[ $serial == $device ]]; then
+                    serial=$ip:$port
+                    echo $serial >$SERIAL_FILE
+                fi
+            fi
+            break
+        fi
+
+        read -p "$ip:" port
+    done
 }
 
 function disconnectDevice() {
@@ -595,6 +631,7 @@ case $1 in
     handleWithoutSerial "$@"
     ;;
 "connect-localhost" | "cl") connectLocalDevice $@ ;;
+"reconnect-remote" | "rr") reconnectRemoteDevice $@ ;;
 "disconnect" | "dc") disconnectDevice $@ ;;
 "disconnect-ssh" | "dcs")
     shift 1
