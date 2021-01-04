@@ -63,6 +63,7 @@ NEED_SERIAL_CMDS=(
     logcat
     pull
     push
+    reboot
     reconnect
     shell
     tcpip
