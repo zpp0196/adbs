@@ -64,9 +64,11 @@ NEED_SERIAL_CMDS=(
     pull
     push
     reboot
+    root
     shell
     tcpip
     uninstall
+    unroot
     \
     is
     us
