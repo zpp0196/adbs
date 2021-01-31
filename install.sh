@@ -18,6 +18,7 @@ if [[ ! -f $xshrc ]]; then
 fi
 
 echo "export ADBS_AGENT=$adb" >>$xshrc
-echo 'export PATH='$path'/bin:$PATH' >>$xshrc
+echo "export ADBS_ROOT=$path" >>$xshrc
+echo 'export PATH='\$ADBS_ROOT'/bin:$PATH' >>$xshrc
 
 echo "installed for $xshrc"

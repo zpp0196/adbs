@@ -8,6 +8,7 @@ if [[ -n $1 ]]; then
 fi
 
 sed -i -e '/.*.ADBS_AGENT/d' $xshrc
+sed -i -e '/.*.ADBS_ROOT/d' $xshrc
 path=${path////\\/}
 sed -i -e '/.*.'$path'\/bin/d' $xshrc
 
