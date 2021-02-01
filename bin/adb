@@ -23,6 +23,11 @@ if [[ -z $ADB ]]; then
     exit $ERR_NO_AGENT
 fi
 
+if [[ ! -f $ADB ]]; then
+    log::err "$ADB not exists"
+    exit -1
+fi
+
 function select_serial() {
     local serial=${1:-}
 
