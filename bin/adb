@@ -552,8 +552,7 @@ function handle_without_serial() {
     serial=$(select_serial ${serial:-})
     local ret=$?
     if [[ $ret != 0 ]]; then
-        log::err "$(err::msg $ERR_NO_DEVICE)"
-        exit $ret
+        $ADB shell exit
     else
         handle_with_serial $serial "$@"
     fi
