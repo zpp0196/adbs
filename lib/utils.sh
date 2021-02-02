@@ -13,5 +13,5 @@ function log::err() {
 
 function adb::is_device_online() {
     local serial=$1
-    $ADBS_AGENT -s $serial shell "echo TEST" 2>&1 >/dev/null
+    $ADBS_AGENT -s $serial shell exit 2>/dev/null
 }
