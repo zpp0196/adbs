@@ -6,12 +6,10 @@ fi
 SERVER_FILE=$ADBS_ROOT/server.apk
 
 function server::exec() {
-    local serial=$1
-    shift 1
     local args=$@
 
     local path="/data/local/tmp/adbs_server"
     local main="me.zpp0196.adbs.Server"
-    adb -s $serial push $SERVER_FILE $path &>/dev/null &&
-        adb -s $serial shell CLASSPATH=$path app_process / $main $args
+    adb push $SERVER_FILE $path &>/dev/null &&
+        adb shell CLASSPATH=$path app_process / $main $args
 }

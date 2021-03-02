@@ -82,10 +82,6 @@ function cfg::fzf_file() {
     cfg::get 'fzf.file' 'fzf --layout=reverse --inline-info --height=12'
 }
 
-function cfg::serial_file() {
-    cfg::get 'global.serial.file' '/tmp/.adbs_serial'
-}
-
 function cfg::install_paths() {
     cfg::get 'install.paths' '.'
 }
@@ -109,5 +105,3 @@ function cfg::screenrecord_touches() {
 function cfg::screenrecord_cache() {
     cfg::get 'screenrecord.cache' '/sdcard/$(date +%Y%m%d%H%M%S).mp4'
 }
-
-SERIAL_FILE=$(cfg::serial_file)

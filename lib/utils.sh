@@ -7,6 +7,5 @@ function log::err() {
 }
 
 function adb::is_device_online() {
-    local serial=$1
-    adb -s $serial shell exit 2>/dev/null
+    adb -s $1 shell exit 2>/dev/null
 }

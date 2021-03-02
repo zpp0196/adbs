@@ -11,7 +11,9 @@ if [[ ! -f $xshrc ]]; then
     touch $xshrc
 fi
 
-echo "export ADBS_ROOT=$path" >>$xshrc
-echo 'export PATH='\$ADBS_ROOT'/bin:$PATH' >>$xshrc
+cat >> $xshrc <<EOF
+export ADBS_ROOT=$path
+export PATH=\$ADBS_ROOT/bin:\$PATH
+EOF
 
 echo "installed for $xshrc"
