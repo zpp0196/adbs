@@ -16,17 +16,9 @@ source $ADBS_ROOT/lib/error.sh
 source $ADBS_ROOT/lib/server.sh
 source $ADBS_ROOT/lib/utils.sh
 
-ADB=${ADBS_AGENT:-}
+ADB=adb
 
-if [[ -z $ADB ]]; then
-    log::err "$(err::msg $ERR_NO_AGENT)"
-    exit $ERR_NO_AGENT
-fi
-
-if [[ ! -f $ADB ]]; then
-    log::err "$ADB not exists"
-    exit -1
-fi
+$ADB --version >/dev/null || exit -1
 
 function select_serial() {
     local serial=${1:-}
