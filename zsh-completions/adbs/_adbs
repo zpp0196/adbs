@@ -1,0 +1,34 @@
+#compdef adbs
+
+local -a _adbs_arguments
+_adbs_arguments=(
+'ls'
+'ll'
+'serial'
+'connect-localhost:[port]'
+'disconnect'
+'disconnect-ssh:[-a]'
+'reconnect'
+'pkg:[-c|-s|-3]'
+'install:[apk]'
+'uninstall:[pkg]'
+'dumpkg:[pkg]'
+'pkginfo:<pkg> [opt]'
+'pullapk:[pkg]'
+'startapp:[pkg]'
+'appsetting:[pkg]'
+'devopt'
+'openurl:<url>'
+'setclip:<data> [-p|-i]'
+'screencap:[path]'
+'screenrecord:[-o path] [opts]'
+'winrecord'
+'version'
+)
+
+_arguments '*:: :->subcmds' && return 0
+
+if (( CURRENT == 1 )); then
+	_describe -t commands "adbs subcommand" _adbs_arguments
+	return
+fi
