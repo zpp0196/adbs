@@ -44,7 +44,7 @@ function connect_local_device() {
 
 function reconnect_device() {
     local device
-    if [[ -n ${ANDROID_SERIAL} ]]; then
+    if [[ -n ${ANDROID_SERIAL:-} ]]; then
         device=$ANDROID_SERIAL
     else
         local devices=$(adb devices | sed '1d' | grep ':')
