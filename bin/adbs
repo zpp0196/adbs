@@ -89,7 +89,6 @@ function disconnect_device() {
 }
 
 function disconnect_ssh_device() {
-    shift 1
     local option=${1:-}
     local LOCALHOST=$(cfg::localhost)
     case $option in
