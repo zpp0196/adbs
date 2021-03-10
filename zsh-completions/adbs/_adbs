@@ -12,7 +12,7 @@ _adbs_arguments=(
 'pkg:[-c|-s|-3]'
 'install:[apk]'
 'uninstall:[pkg]'
-'dumpkg:[pkg]'
+'dumppkg:[pkg]'
 'pkginfo:<pkg> [opt]'
 'pullapk:[pkg]'
 'startapp:[pkg]'
