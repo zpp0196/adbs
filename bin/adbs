@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 VERSION=1.1.0
-BUILD_DATE=1614771000
+BUILD_DATE=1618137000
 
 set -u
 set -e
