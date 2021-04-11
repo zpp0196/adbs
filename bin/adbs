@@ -48,7 +48,7 @@ function connect_local_device() {
 
 function reconnect_device() {
     local device
-    if [[ -n ${ANDROID_SERIAL} ]]; then
+    if [[ -n ${ANDROID_SERIAL:-} ]]; then
         device=$ANDROID_SERIAL
     else
         local devices=$($ADB devices | sed '1d' | grep ':')
@@ -93,7 +93,6 @@ function disconnect_device() {
 }
 
 function disconnect_ssh_device() {
-    shift 1
     local option=${1:-}
     local LOCALHOST=$(cfg::localhost)
     case $option in
