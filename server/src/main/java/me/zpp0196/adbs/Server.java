@@ -2,9 +2,7 @@ package me.zpp0196.adbs;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -48,12 +46,9 @@ public class Server {
                     installer = String.format("%s(%s)", appName, installer);
                 }
                 echo("安装来源", installer, 2);
-                Intent launcherIntent = pm.getLaunchIntentForPackage(packageName);
-                if (launcherIntent != null) {
-                    ComponentName component = launcherIntent.getComponent();
-                    if (component != null) {
-                        echo("启动界面", component.getClassName(), 2);
-                    }
+                String activityName = Utils.getLaunchActivityName(pm, packageName);
+                if (activityName != null) {
+                    echo("启动界面", activityName, 2);
                 }
                 echo("安装包路径", ai.sourceDir, 2);
                 echo("安装包 MD5", Utils.getMD5(ai.sourceDir), 2);
@@ -110,15 +105,12 @@ public class Server {
                         return;
                     case "-m":
                     case "-splash":
-                        Intent launcherIntent = pm.getLaunchIntentForPackage(packageName);
-                        if (launcherIntent != null) {
-                            ComponentName component = launcherIntent.getComponent();
-                            if (component != null) {
-                                System.out.println(component.getClassName());
-                                return;
-                            }
+                        String activityName = Utils.getLaunchActivityName(pm, packageName);
+                        if (activityName != null) {
+                            System.out.println(activityName);
+                        } else {
+                            System.exit(1);
                         }
-                        System.exit(1);
                         return;
                     case "-p":
                     case "--path":

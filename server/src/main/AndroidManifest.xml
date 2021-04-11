@@ -2,6 +2,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="me.zpp0196.adbs.server">
 
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
+    </queries>
+
     <application
         android:label="adbs-server"
         tools:ignore="all" />

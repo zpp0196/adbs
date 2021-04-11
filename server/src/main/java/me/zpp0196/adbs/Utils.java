@@ -1,8 +1,15 @@
 package me.zpp0196.adbs;
 
 import android.annotation.SuppressLint;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.os.Build;
 import android.os.Looper;
+import android.text.TextUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,6 +23,7 @@ import java.security.MessageDigest;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -82,5 +90,30 @@ public class Utils {
         Context context = (Context) method.invoke(activityThread);
         System.setErr(err);
         return context;
+    }
+
+    public static String getLaunchActivityName(PackageManager pm, String packageName) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            Intent intent = pm.getLaunchIntentForPackage(packageName);
+            if (intent != null) {
+                ComponentName component = intent.getComponent();
+                if (component != null) {
+                    return component.getClassName();
+                }
+            }
+        }
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> list = pm.queryIntentActivities(intent,
+                PackageManager.GET_UNINSTALLED_PACKAGES);
+        for (ResolveInfo info : list) {
+            ActivityInfo ai = info.activityInfo;
+            if (!TextUtils.equals(packageName, ai.packageName)) {
+                continue;
+            }
+            return info.activityInfo.name;
+        }
+        return null;
     }
 }
