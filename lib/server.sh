@@ -10,6 +10,6 @@ function server::exec() {
 
     local path="/data/local/tmp/adbs_server"
     local main="me.zpp0196.adbs.Server"
-    adb push $SERVER_FILE $path &>/dev/null &&
-        adb shell CLASSPATH=$path app_process / $main $args
+    $ADB push $SERVER_FILE $path &>/dev/null &&
+        $ADB shell CLASSPATH=$path app_process / $main $args
 }

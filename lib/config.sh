@@ -87,7 +87,7 @@ function cfg::install_paths() {
 }
 
 function cfg::pullapk_output() {
-    cfg::get 'pullapk.output' './$(adb -s ${serial} pi ${pkg} --label)_${pkg}_v$(adb -s ${serial} pi ${pkg} --version-name)_$(adb -s ${serial} pi ${pkg} --md5).apk'
+    cfg::get 'pullapk.output' './$($ADB -s ${serial} pi ${pkg} --label)_${pkg}_v$($ADB -s ${serial} pi ${pkg} --version-name)_$($ADB -s ${serial} pi ${pkg} --md5).apk'
 }
 
 function cfg::screencap_output() {

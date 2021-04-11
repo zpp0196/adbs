@@ -7,5 +7,5 @@ function log::err() {
 }
 
 function adb::is_device_online() {
-    adb -s $1 shell exit 2>/dev/null
+    $ADB -s $1 shell exit 2>/dev/null
 }

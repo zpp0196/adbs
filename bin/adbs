@@ -11,16 +11,20 @@ if [[ -z ${ADBS_ROOT:-} ]]; then
     exit -1
 fi
 
+if [[ -z ${ADB:-} ]]; then
+    ADB=adb
+fi
+
 source $ADBS_ROOT/lib/config.sh
 source $ADBS_ROOT/lib/error.sh
 source $ADBS_ROOT/lib/server.sh
 source $ADBS_ROOT/lib/utils.sh
 
-adb --version >/dev/null
+$ADB --version >/dev/null
 
 function select_serial() {
     local serial
-    local devices=$(adb devices | sed '1d;$d')
+    local devices=$($ADB devices | sed '1d;$d')
     if [[ -z $devices ]]; then
         exit $ERR_NO_DEVICE
     elif [[ $(echo "$devices" | wc -l) == 1 ]]; then
@@ -39,7 +43,7 @@ function connect_local_device() {
     if [[ -z $port ]]; then
         read -p "port: " port
     fi
-    [[ -n $port ]] && adb connect $(cfg::localhost):$port
+    [[ -n $port ]] && $ADB connect $(cfg::localhost):$port
 }
 
 function reconnect_device() {
@@ -47,7 +51,7 @@ function reconnect_device() {
     if [[ -n ${ANDROID_SERIAL} ]]; then
         device=$ANDROID_SERIAL
     else
-        local devices=$(adb devices | sed '1d' | grep ':')
+        local devices=$($ADB devices | sed '1d' | grep ':')
         if [[ -z $devices ]]; then
             log::err "$(err::msg $ERR_NO_DEVICE)"
             exit $ERR_NO_DEVICE
@@ -63,8 +67,8 @@ function reconnect_device() {
     local port=${ip_port[1]}
 
     for i in {1..10}; do
-        adb disconnect $ip:$port &>/dev/null
-        adb connect $ip:$port
+        $ADB disconnect $ip:$port &>/dev/null
+        $ADB connect $ip:$port
         adb::is_device_online "$ip:$port"
         if [[ $? == 0 ]]; then
             exit
@@ -75,13 +79,13 @@ function reconnect_device() {
 }
 
 function disconnect_device() {
-    local devices=$(adb devices | sed '1d' | grep ':')
+    local devices=$($ADB devices | sed '1d' | grep ':')
     if [[ -n $devices ]]; then
         local serial=$(echo "$devices" | $(cfg::fzf_serial) | cut -f 1)
         if [[ -z $serial ]]; then
             exit $ERR_CANCELLED
         fi
-        adb disconnect $serial
+        $ADB disconnect $serial
     else
         log::err "$(err::msg $ERR_NO_DEVICE)"
         exit $ERR_NO_DEVICE
@@ -94,13 +98,13 @@ function disconnect_ssh_device() {
     local LOCALHOST=$(cfg::localhost)
     case $option in
     "-a")
-        adb devices | grep $LOCALHOST | cut -f 1 | cut -d ':' -f 2 |
+        $ADB devices | grep $LOCALHOST | cut -f 1 | cut -d ':' -f 2 |
             xargs -i $0 disconnect-ssh {}
         ;;
     *)
         local port=${1:-}
         if [[ -z $port ]]; then
-            local devices=$(adb devices | grep $LOCALHOST)
+            local devices=$($ADB devices | grep $LOCALHOST)
             if [[ -z $devices ]]; then
                 log::err "$(err::msg $ERR_NO_DEVICE)"
                 exit $ERR_NO_DEVICE
@@ -110,7 +114,7 @@ function disconnect_ssh_device() {
                 exit $ERR_CANCELLED
             fi
         fi
-        adb disconnect $LOCALHOST:$port
+        $ADB disconnect $LOCALHOST:$port
         pkill -f "ssh -L $port"
         ;;
     esac
@@ -119,14 +123,14 @@ function disconnect_ssh_device() {
 function select_package() {
     local filter=${1:-}
     if [[ $filter == "-c" ]]; then
-        adb shell dumpsys window | grep mFocusedApp | sed 's/.*\s\(.*\)\/.*/\1/' | sed -n '1p'
+        $ADB shell dumpsys window | grep mFocusedApp | sed 's/.*\s\(.*\)\/.*/\1/' | sed -n '1p'
         return
     elif [[ -n $filter && $filter != "-s" && $filter != "-3" ]]; then
         log::err "unknown option: $filter"
         exit -1
     fi
 
-    local pkg=$(adb shell pm list package $filter -u | cut -d ':' -f 2 | $(cfg::fzf_package))
+    local pkg=$($ADB shell pm list package $filter -u | cut -d ':' -f 2 | $(cfg::fzf_package))
     if [[ -z $pkg ]]; then
         exit $ERR_CANCELLED
     fi
@@ -138,7 +142,7 @@ function install_apk() {
     local apk=${1:-}
 
     if [[ -n $apk ]]; then
-        adb install -r -t "$apk"
+        $ADB install -r -t "$apk"
         exit
     fi
 
@@ -155,7 +159,7 @@ function install_apk() {
         exit $ERR_CANCELLED
     fi
 
-    adb install -r -t "$apk"
+    $ADB install -r -t "$apk"
 }
 
 function uninstall_package() {
@@ -163,7 +167,7 @@ function uninstall_package() {
     if [[ -z $pkg ]]; then
         pkg=$($0 pkg -3)
     fi
-    adb uninstall $pkg
+    $ADB uninstall $pkg
 }
 
 function pull_apk() {
@@ -181,7 +185,7 @@ function pull_apk() {
     fi
 
     local _path=$(server::exec pi $pkg --path)
-    adb pull $_path "$path" &>/dev/null
+    $ADB pull $_path "$path" &>/dev/null
     echo $path
 }
 
@@ -218,7 +222,7 @@ function start_app() {
         exit -1
     fi
 
-    adb shell am start $pkg/$activity
+    $ADB shell am start $pkg/$activity
 }
 
 function start_app_setting() {
@@ -227,11 +231,11 @@ function start_app_setting() {
         pkg=$($0 pkg)
     fi
 
-    adb shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS package:$pkg
+    $ADB shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS package:$pkg
 }
 
 function start_dev_opts() {
-    adb shell am start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS
+    $ADB shell am start -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS
 }
 
 function open_url() {
@@ -246,7 +250,7 @@ function open_url() {
         url="http://$url"
     fi
 
-    adb shell am start -d "$url"
+    $ADB shell am start -d "$url"
 }
 
 function set_clipboard() {
@@ -257,9 +261,9 @@ function set_clipboard() {
     server::exec scp "$text"
 
     case ${2:-} in
-    "-p") adb shell input keyevent 279 ;;
+    "-p") $ADB shell input keyevent 279 ;;
     "-i")
-        adb shell input keyevent 279
+        $ADB shell input keyevent 279
         server::exec scp
         ;;
     esac
@@ -274,7 +278,7 @@ function screencap() {
     if [[ ! -e $(dirname $path) ]]; then
         mkdir -p $(dirname $path)
     fi
-    adb shell screencap -p >"$path"
+    $ADB shell screencap -p >"$path"
     echo $path
 }
 
@@ -282,7 +286,7 @@ function screenrecord() {
     shift 1
     local option=${1:-}
     if [[ $option == "--help" || $option == "-h" ]]; then
-        adb shell screenrecord --help
+        $ADB shell screenrecord --help
         exit
     fi
 
@@ -304,29 +308,29 @@ function screenrecord() {
         mkdir -p $(dirname $path)
     fi
 
-    local show_touches=$(adb shell settings get system show_touches)
+    local show_touches=$($ADB shell settings get system show_touches)
     if [[ $show_touches == null ]]; then
         show_touches=0
     fi
     if [[ $(cfg::screenrecord_touches) == 1 ]]; then
-        adb shell settings put system show_touches 1
+        $ADB shell settings put system show_touches 1
     fi
 
     local _path=$(cfg::screenrecord_cache)
     _path=$(eval "echo "$_path"")
     _path=${_path// /\\ }
 
-    trap "sleep 1 && adb pull $_path \"$path\">/dev/null; \
-    adb shell rm \"$_path\" ; \
-    adb shell settings put system show_touches $show_touches ; \
+    trap "sleep 1 && $ADB pull $_path \"$path\">/dev/null; \
+    $ADB shell rm \"$_path\" ; \
+    $ADB shell settings put system show_touches $show_touches ; \
     echo ; echo $path" INT
-    adb shell screenrecord $_path $options
+    $ADB shell screenrecord $_path $options
 }
 
 function winrecord() {
     local last=""
     while true; do
-        local window=$(adb shell dumpsys window | grep mCurrentFocus)
+        local window=$($ADB shell dumpsys window | grep mCurrentFocus)
         [[ -n $window ]] || exit
         window=${window:16}
         if [[ $window != "null" && $window != $last ]]; then
@@ -353,8 +357,8 @@ case ${1:-} in
     *) log::err "unknown option: ${2:-}" ;;
     esac
     ;;
-"ls") adb devices ;;
-"ll") adb devices -l ;;
+"ls") $ADB devices ;;
+"ll") $ADB devices -l ;;
 "serial") select_serial ;;
 "connect-localhost") connect_local_device ${2:-} ;;
 "disconnect") disconnect_device ;;
