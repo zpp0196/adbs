@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-path=$(pwd)
+path=$(dirname $(readlink -f "$0"))
 xshrc="$HOME/.zshrc"
 
 if [[ -n $1 ]]; then
