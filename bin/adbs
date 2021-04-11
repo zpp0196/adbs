@@ -378,5 +378,5 @@ case ${1:-} in
 "screenrecord") screenrecord "$@" ;;
 "winrecord") winrecord ;;
 "version") version ;;
-*) log::err "unknown option: ${1:-}" ;;
+*) $ADB "$@" ;;
 esac
