@@ -87,7 +87,11 @@ function cfg::install_paths() {
 }
 
 function cfg::pullapk_output() {
-    cfg::get 'pullapk.output' './$($ADB -s ${serial} pi ${pkg} --label)_${pkg}_v$($ADB -s ${serial} pi ${pkg} --version-name)_$($ADB -s ${serial} pi ${pkg} --md5).apk'
+    cfg::get 'pullapk.output' './$($0 pkginfo ${pkg} --label)_${pkg}_v$($0 pkginfo ${pkg} --version-name)_$($0 pkginfo ${pkg} --md5).apk'
+}
+
+function cfg::pullapk_split_output() {
+    cfg::get 'pullapk.split.output' './$($0 pkginfo ${pkg} --label)_${pkg}_v$($0 pkginfo ${pkg} --version-name)'
 }
 
 function cfg::screencap_output() {

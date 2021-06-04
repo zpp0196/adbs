@@ -161,6 +161,17 @@ function install_apk() {
     $ADB install -r -t "$apk"
 }
 
+function install_split_apk() {
+    local dir=${1:-}
+
+    if [[ -z $dir ]]; then
+        dir=$(find . -maxdepth 1 -type d | $(cfg::fzf_file))
+    fi
+
+    cd "$dir"
+    $ADB install-multiple -r *.apk
+}
+
 function uninstall_package() {
     local pkg=${1:-}
     if [[ -z $pkg ]]; then
@@ -177,15 +188,35 @@ function pull_apk() {
         pkg=$($0 pkg)
     fi
 
-    # todo
+    local _path=$(server::exec pi $pkg --path)
+    [[ -n _path ]] || exit
+
     if [[ -z $path ]]; then
         path=$(cfg::pullapk_output)
         path=$(eval "echo "$path"")
     fi
 
-    local _path=$(server::exec pi $pkg --path)
     $ADB pull $_path "$path" &>/dev/null
     echo $path
+}
+
+function pull_split_apk() {
+    local pkg=${1:-}
+
+    if [[ -z $pkg ]]; then
+        pkg=$($0 pkg)
+    fi
+
+    local apk_paths=$($ADB shell pm path $pkg)
+    [[ -n $apk_paths ]] || exit
+
+    local path=$(cfg::pullapk_split_output)
+    path=$(eval "echo "$path"")
+    [[ -e "$path" ]] || mkdir -p "$path"
+
+    for p in $(echo "$apk_paths"); do
+        $ADB pull ${p#package:} "$path/"
+    done
 }
 
 function dump_package_info() {
@@ -365,8 +396,10 @@ case ${1:-} in
 "reconnect") reconnect_device ;;
 "pkg") select_package ${2:-} ;;
 "install") install_apk ${2:-} ;;
+"install-split") install_split_apk ${2:-} ;;
 "uninstall") uninstall_package ${2:-} ;;
 "pullapk") pull_apk ${2:-} ;;
+"pullapk-split") pull_split_apk ${2:-} ;;
 "dumppkg") dump_package_info ${2:-} ;;
 "pkginfo") get_package_info "$@" ;;
 "startapp") start_app ${2:-} ;;
