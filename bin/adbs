@@ -66,6 +66,7 @@ function reconnect_device() {
     local ip=${ip_port[0]}
     local port=${ip_port[1]}
 
+    set +e
     for i in {1..10}; do
         $ADB disconnect $ip:$port &>/dev/null
         $ADB connect $ip:$port
