@@ -281,7 +281,7 @@ function open_url() {
         url="http://$url"
     fi
 
-    $ADB shell am start -d "$url"
+    $ADB shell am start -d "$url" -a android.intent.action.VIEW
 }
 
 function set_clipboard() {
