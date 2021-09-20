@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 
-VERSION=1.1.0
-BUILD_DATE=1618137000
+VERSION=1.2.0
+BUILD_DATE=1632128400
 
 set -u
 set -e
 
-if [[ -z ${ADBS_ROOT:-} ]]; then
-    echo -e "\033[031m\adbS_ROOT is not in your \$PATH\033[0m"
-    exit -1
+UNAME=$(uname)
+if [[ $UNAME == "Darwin" ]]; then
+    ADBS_ROOT=$(dirname $(dirname $(realpath "$0")))
+else
+    ADBS_ROOT=$(dirname $(dirname $(readlink -f "$0")))
 fi
 
 if [[ -z ${ADB:-} ]]; then
@@ -66,6 +68,7 @@ function reconnect_device() {
     local ip=${ip_port[0]}
     local port=${ip_port[1]}
 
+    set +e
     for i in {1..10}; do
         $ADB disconnect $ip:$port &>/dev/null
         $ADB connect $ip:$port
@@ -122,7 +125,7 @@ function disconnect_ssh_device() {
 function select_package() {
     local filter=${1:-}
     if [[ $filter == "-c" ]]; then
-        $ADB shell dumpsys window | grep mFocusedApp | sed 's/.*\s\(.*\)\/.*/\1/' | sed -n '1p'
+        $ADB shell dumpsys window | grep mFocusedApp | sed 's/.*\ \(.*\)\/.*/\1/' | sed -n '1p'
         return
     elif [[ -n $filter && $filter != "-s" && $filter != "-3" ]]; then
         log::err "unknown option: $filter"
@@ -161,6 +164,17 @@ function install_apk() {
     $ADB install -r -t "$apk"
 }
 
+function install_split_apk() {
+    local dir=${1:-}
+
+    if [[ -z $dir ]]; then
+        dir=$(find . -maxdepth 1 -type d | $(cfg::fzf_file))
+    fi
+
+    cd "$dir"
+    $ADB install-multiple -r *.apk
+}
+
 function uninstall_package() {
     local pkg=${1:-}
     if [[ -z $pkg ]]; then
@@ -177,15 +191,35 @@ function pull_apk() {
         pkg=$($0 pkg)
     fi
 
-    # todo
+    local _path=$(server::exec pi $pkg --path)
+    [[ -n _path ]] || exit
+
     if [[ -z $path ]]; then
         path=$(cfg::pullapk_output)
         path=$(eval "echo "$path"")
     fi
 
-    local _path=$(server::exec pi $pkg --path)
     $ADB pull $_path "$path" &>/dev/null
     echo $path
+}
+
+function pull_split_apk() {
+    local pkg=${1:-}
+
+    if [[ -z $pkg ]]; then
+        pkg=$($0 pkg)
+    fi
+
+    local apk_paths=$($ADB shell pm path $pkg)
+    [[ -n $apk_paths ]] || exit
+
+    local path=$(cfg::pullapk_split_output)
+    path=$(eval "echo "$path"")
+    [[ -e "$path" ]] || mkdir -p "$path"
+
+    for p in $(echo "$apk_paths"); do
+        $ADB pull ${p#package:} "$path/"
+    done
 }
 
 function dump_package_info() {
@@ -249,7 +283,7 @@ function open_url() {
         url="http://$url"
     fi
 
-    $ADB shell am start -d "$url"
+    $ADB shell am start -d "$url" -a android.intent.action.VIEW
 }
 
 function set_clipboard() {
@@ -341,8 +375,13 @@ function winrecord() {
 
 function version() {
     echo -e "Version\t\t" $VERSION
-    echo -e "Build date\t" $(date --date="@$BUILD_DATE" '+%Y/%m/%d %H:%M:%S')
+    if [[ ${UNAME:-$(uname)} == "Darwin" ]]; then
+        echo -e "Build date\t" $(date -r $BUILD_DATE '+%Y/%m/%d %H:%M:%S')
+    else
+        echo -e "Build date\t" $(date --date="@$BUILD_DATE" '+%Y/%m/%d %H:%M:%S')
+    fi
     echo -e "Install path\t" $0
+    echo -e "Source path\t" $ADBS_ROOT
 }
 
 case ${1:-} in
@@ -365,8 +404,10 @@ case ${1:-} in
 "reconnect") reconnect_device ;;
 "pkg") select_package ${2:-} ;;
 "install") install_apk ${2:-} ;;
+"install-split") install_split_apk ${2:-} ;;
 "uninstall") uninstall_package ${2:-} ;;
 "pullapk") pull_apk ${2:-} ;;
+"pullapk-split") pull_split_apk ${2:-} ;;
 "dumppkg") dump_package_info ${2:-} ;;
 "pkginfo") get_package_info "$@" ;;
 "startapp") start_app ${2:-} ;;

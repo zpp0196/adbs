@@ -1,14 +1,6 @@
-#!/usr/bin/env bash
+#/bin/sh
 
-path=$(dirname $(readlink -f "$0"))
-xshrc="$HOME/.zshrc"
-
-if [[ -n $1 ]]; then
-    xshrc=$1
+sudo rm -rf $(which adbs)
+if [ -n $ZSH ]; then
+    sudo rm -rf $ZSH/custom/plugins/adbs
 fi
-
-sed -i -e '/.*.ADBS_ROOT/d' $xshrc
-path=${path////\\/}
-sed -i -e '/.*.'$path'\/bin/d' $xshrc
-
-echo "uninstalled from $xshrc"
