@@ -22,7 +22,14 @@ adbs serial
 
 仅连接一台设备时，会直接输出该设备的序列号，否则选择一个设备并输出序列号。
 
-可配合其它脚本或命令一起使用，例如 [scrcpy](https://github.com/Genymobile/scrcpy):
+可配合其它脚本或命令一起使用，例如 adb 或 [scrcpy](https://github.com/Genymobile/scrcpy):
+
+```bash
+adb -s $(adbs serial) shell
+
+export ANDROID_SERIAL=$(adbs serial)
+adb shell
+```
 
 ```bash
 scrcpy --serial $(adbs serial)
@@ -34,7 +41,7 @@ scrcpy --serial $(adbs serial)
 adbs disconnect
 ```
 
-该命令约等于 `adb disconnect $(adbs serial)`，区别是该命令不会显示 USB 连接的设备。
+该命令约等于 `adb disconnect $(adbs serial)`，区别是该命令会过滤不包含 `:` 的设备。
 
 ### pkg
 
