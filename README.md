@@ -5,7 +5,7 @@
 ## Install
 
 ```bash
-git clone https://github.com/zpp0196/adbs.git && ./adbs/install.sh && source ~/.zshrc
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/zpp0196/adbs/main/install.sh)"
 ```
 
 > 命令补全请看这里：[zsh-completions](https://github.com/zpp0196/adbs/tree/main/zsh-completions/adbs)

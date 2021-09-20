@@ -5,6 +5,14 @@ fi
 
 CONFIG=$ADBS_ROOT/.properties
 
+grep_compat="grep -P"
+sed_compat="sed -i"
+
+if [[ ${UNAME:-$(uname)} == "Darwin" ]]; then
+    grep_compat="egrep -o"
+    sed_compat="sed -i ''"
+fi
+
 function cfg::list() {
     [[ -f $CONFIG ]] && cat $CONFIG | grep "^[^#]"
 }
@@ -23,7 +31,11 @@ function cfg::get() {
         return
     fi
 
-    local val=$(grep -P "^\s*[^#]?${key}=.*$" $CONFIG | cut -d '=' -f 1 --complement)
+    if [[ ${UNAME:-$(uname)} == "Darwin" ]]; then
+        local val=$($grep_compat "^\s*[^#]?${key}=.*$" $CONFIG | cut -d '=' -f 2)
+    else
+        local val=$($grep_compat "^\s*[^#]?${key}=.*$" $CONFIG | cut -d '=' -f 1 --complement)
+    fi
     if [[ -z $val ]]; then
         val=$2
     fi
@@ -48,9 +60,9 @@ function cfg::set() {
         touch $CONFIG
     fi
 
-    if [[ $(grep -P "^\s*[^#]?${key}=.*$" $CONFIG) ]]; then
+    if [[ $($grep_compat "\s*[^#]?${key}=.*" $CONFIG) ]]; then
         val=${val////\\/}
-        sed -i "s/$key=.*/$key=${val}/g" $CONFIG
+        $sed_compat "s/$key=.*/$key=${val}/g" $CONFIG
     else
         echo $key=$val >>$CONFIG
     fi
@@ -63,7 +75,7 @@ function cfg::remove() {
         return
     fi
 
-    sed -i "/$key=.*/d" $CONFIG
+    $sed_compat "/$key=.*/d" $CONFIG
 }
 
 function cfg::localhost() {
