@@ -42,8 +42,11 @@ public class Server {
                 echo("数据路径", ai.dataDir, 2);
                 String installer = pm.getInstallerPackageName(packageName);
                 if (installer != null) {
-                    CharSequence appName = pm.getApplicationInfo(installer, 0).loadLabel(pm);
-                    installer = String.format("%s(%s)", appName, installer);
+                    try {
+                        CharSequence appName = pm.getApplicationInfo(installer, 0).loadLabel(pm);
+                        installer = String.format("%s(%s)", appName, installer);
+                    } catch (PackageManager.NameNotFoundException ignored) {
+                    }
                 }
                 echo("安装来源", installer, 2);
                 String activityName = Utils.getLaunchActivityName(pm, packageName);
@@ -143,7 +146,7 @@ public class Server {
             }
         };
 
-        private List<String> opts;
+        private final List<String> opts;
 
         Handler(String... opts) {
             this.opts = Arrays.asList(opts);
